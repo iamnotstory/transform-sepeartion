@@ -111,7 +111,7 @@ class DF_Model(object):
                 V = tf.layers.dense(feat_input, num_units, activation = None, name = 'V', use_bias = None)
                 attention_probs = tf.nn.softmax(tf.multiply(tf.matmul(Q,K, transpose_b = True), 1.0/ math.sqrt(float(num_units))))
                 
-                attention_probs_f = tf.transpose(tf.nn.softmax(tf.multiply(tf.matmul(tf.transpose(Q, [0,1,3,2]), K),1.0/math.sqrt(float(num_units)))), [0,1,3,2])
+                attention_probs_f = tf.transpose(tf.nn.softmax(tf.multiply(tf.matmul(tf.transpose(Q, [0,2,1]), K),1.0/math.sqrt(float(num_units)))), [0,2,1])
                 attention_out.append(tf.matmul(tf.matmul(attention_probs, V), attention_probs_f))
         self.attention_probs = attention_probs
         attention_out = tf.concat(attention_out, 2)
