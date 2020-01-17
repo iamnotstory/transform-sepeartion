@@ -63,7 +63,7 @@ if __name__ == "__main__":
                         else:
                             #loss_checker.learning_rate = 0.001
                             i_global = model.run_batch(batch_data, loss_checker.learning_rate)
-                            if i_global % cfg.dev_period == 0:
+                            if i_global % cfg.dev_period == 0 and i_epoch > 10:
                                 avg_loss = model.valid(dev_reader)
                                 loss_improved, best_loss = loss_checker.update(sess, avg_loss)
                                 if loss_improved:

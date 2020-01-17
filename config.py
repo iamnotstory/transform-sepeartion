@@ -49,7 +49,7 @@ job_type = "train"
 lamda = 100.0
 #job_dir = "job/no_pretrain_2layer_nodrop_ipd_anechoic"
 #job_dir = "job/no_preptrain_multidcl1_cmvn_npsm_lambda50"
-job_dir = "job/original_nreluqkv_2tr_test"
+job_dir = "job/original_nreluqkv_1tr_test_20epoch"
 #job_dir = "job/original_nreluqkv"
 #job_dir = "job/no_preptrain_multidc_cmvn"
 #job_dir = "job/no_pretrain_2layer_nodrop_multidc"
@@ -96,9 +96,9 @@ test_dir = '/gpfs/share/home/1801213802/data/mixreverb/2speakers_reverb/wav8k/mi
 #test_name = "test_h1000"
 #test_dir = "/gpfs/share/home/1801213802/data/mixreverb/2speakers_reverb/wav8k/min/cv"
 #test_name = 'test_h1000_load1'
-test_name = 'test_h1000_valid'
+test_name = 'test_tt'
 # load option
-load_option = 0
+load_option = 1
 load_path = ""
 stable = False
 silence = False
@@ -110,4 +110,4 @@ job_anechoic = False
 #transformer config
 transformer_total_units = 516
 transformer_heads = 4
-transformer_num_layers = 2
+transformer_num_layers = 1
