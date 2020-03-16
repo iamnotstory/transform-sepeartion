@@ -98,21 +98,51 @@ class DF_Model(object):
         self.latest_loss = 0.0
         self.epoch_counter += 1
 
+    def gw_encoding(self, length, time_step, batch_size):
+        cfg = self.config
+        res = []
+        for i in range(length):
+            tmp = []
+            for t in range(length):
+                tmp.append(-np.abs(i - t) ** 2)
+            res.append(tmp)
+        res = np.array(res)
+        
+
+        yeta = tf.get_variable(name='eta', shape = [1], dtype = tf.float32)
+        res = tf.exp(res / tf.square(yeta))
+
+        gw_ind = tf.tile(tf.expand_dims(tf.range(time_step),0), [batch_size, 1])
+        gw_enc = tf.convert_to_tensor(res, tf.float32)
+        #gw_ind_ = tf.tile(tf.expand_dims(0,tf.range(time_step)),[batch_size, 1])
+        outputs = tf.nn.embedding_lookup(gw_enc, gw_ind)
+        #outputs = tf.nn.embedding_lookup(outputs, gw_ind_)
+        return tf.to_float(outputs)
     def multihead_attention(self, feat_input):
         cfg = self.config
         total_units = cfg.transformer_total_units
         num_heads = cfg.transformer_heads
         num_units = total_units / num_heads
         attention_out = []
+        time_step = tf.shape(feat_input)[1]
+        batch_size = tf.shape(feat_input)[0]
         for i in range(num_heads):
             with tf.variable_scope('head_%d'%(i+1)):
                 Q = tf.layers.dense(feat_input, num_units, activation = None, name = 'Q', use_bias = None)
                 K = tf.layers.dense(feat_input, num_units, activation = None, name = 'K', use_bias = None)
                 V = tf.layers.dense(feat_input, num_units, activation = None, name = 'V', use_bias = None)
-                attention_probs = tf.nn.softmax(tf.multiply(tf.matmul(Q,K, transpose_b = True), 1.0/ math.sqrt(float(num_units))))
+                gw = self.gw_encoding(cfg.longer_sent_len, time_step, batch_size)
+                cl = tf.multiply(tf.matmul(Q, tf.transpose(K, [0,2,1])), 1.0 / math.sqrt(float(num_units)))
+                sl = tf.multiply(gw, cl)
+                sl = tf.abs(sl)
+                sl = tf.nn.softmax(sl)
+                attention_probs = sl
+                attention_out_one = tf.matmul(sl, V)
+                attention_out.append(attention_out_one)
+                #attention_probs = tf.nn.softmax(tf.multiply(tf.matmul(Q,K, transpose_b = True), 1.0/ math.sqrt(float(num_units))))
                 
-                attention_probs_f = tf.transpose(tf.nn.softmax(tf.multiply(tf.matmul(tf.transpose(Q, [0,2,1]), K),1.0/math.sqrt(float(num_units)))), [0,2,1])
-                attention_out.append(tf.matmul(tf.matmul(attention_probs, V), attention_probs_f))
+                #attention_probs_f = tf.transpose(tf.nn.softmax(tf.multiply(tf.matmul(tf.transpose(Q, [0,2,1]), K),1.0/math.sqrt(float(num_units)))), [0,2,1])
+                #attention_out.append(tf.matmul(tf.matmul(attention_probs, V), attention_probs_f))
         self.attention_probs = attention_probs
         attention_out = tf.concat(attention_out, 2)
         attention_out = tf.layers.dense(attention_out, total_units, activation = tf.nn.relu)
@@ -151,8 +181,9 @@ class DF_Model(object):
         project_size = feat_dim * E
         time_step = tf.shape(feat_input)[1]
         batch_size = tf.shape(feat_input)[0]
-        pe = self.positional_encoding(batch_size, time_step, feat_dim ) 
-        feat_input = tf.concat([feat_input, pe], axis = 2)
+        #pe = self.positional_encoding(batch_size, time_step, feat_dim ) 
+        #feat_input = tf.concat([feat_input, pe], axis = 2)
+        
         with tf.variable_scope('embedding'):
             feat_input = self.transformer(feat_input)
             s_project = tf.layers.dense(feat_input, project_size, activation = tf.nn.tanh, name = 'emb', use_bias = True)

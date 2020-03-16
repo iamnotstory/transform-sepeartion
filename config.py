@@ -50,7 +50,7 @@ lamda = 100.0
 #job_dir = "job/no_pretrain_2layer_nodrop_ipd_anechoic"
 #job_dir = "job/no_preptrain_multidcl1_cmvn_npsm_lambda50"
 #job_dir = "job/original_nreluqkv_1tr_test_50epoch"
-job_dir = "job/pretrain_50epoch"
+job_dir = "job/gw"
 #job_dir = "job/original_nreluqkv"
 #job_dir = "job/no_preptrain_multidc_cmvn"
 #job_dir = "job/no_pretrain_2layer_nodrop_multidc"
@@ -75,7 +75,7 @@ fcl_layers = 0
 fcl_hidden_size = 600
 # training param
 seed = 123
-resume = True
+resume = False
 init_mean = 0.0
 init_stddev = 0.02
 max_grad_norm = 200
@@ -97,7 +97,7 @@ test_dir = '/gpfs/share/home/1801213802/data/mixreverb/2speakers_reverb/wav8k/mi
 #test_name = "test_h1000"
 #test_dir = "/gpfs/share/home/1801213802/data/mixreverb/2speakers_reverb/wav8k/min/cv"
 #test_name = 'test_h1000_load1'
-test_name = 'test_tt'
+test_name = 'GW'
 # load option
 load_option = 1
 load_path = ""
@@ -109,6 +109,6 @@ DC_new = True
 job_anechoic = False
 
 #transformer config
-transformer_total_units = 516
-transformer_heads = 4
+transformer_total_units = 387
+transformer_heads = 3
 transformer_num_layers = 1

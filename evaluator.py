@@ -27,7 +27,16 @@ def prepare_feat(data_dir, file_name):
     total_sig = read_wav(mixture_file, samp_rate=cfg.samp_rate)
     mixture_sig = total_sig[0]
     mixture_stft = stft(mixture_sig, cfg.frame_size, cfg.shift, fading=True, ceil=True)
+    mixture_stft = mixture_stft[:400]
+
+
+
+    
     mixture_magn, mixture_phase = np.abs(mixture_stft), np.angle(mixture_stft)
+    
+    mixture_sig_recon = get_recon_sig(mixture_magn, mixture_phase, cfg.frame_size, cfg.shift, fading=True)
+    length = mixture_sig_recon.shape[0]
+    print(length)
     threshold = 10 ** (cfg.threshold/20.0) * np.max(mixture_magn)
     silence_mask = (mixture_magn > threshold)
     # read from refer channels
@@ -37,6 +46,9 @@ def prepare_feat(data_dir, file_name):
         #refer_sig = read_wav(refer_file, samp_rate=cfg.samp_rate)
         refer_sig = total_sig[ch]
         refer_stft = stft(refer_sig, cfg.frame_size, cfg.shift, fading=True, ceil=True)
+        refer_stft = refer_stft[:400]
+
+
         refer_phase = np.angle(refer_stft)
         cos_diff = np.cos(mixture_phase - refer_phase)
         sin_diff = np.sin(mixture_phase - refer_phase)
@@ -50,6 +62,7 @@ def prepare_feat(data_dir, file_name):
         source_sig = read_wav(source_path, samp_rate=cfg.samp_rate)[0]
         source_sigs.append(source_sig)
         source_stft = stft(source_sig, cfg.frame_size, cfg.shift, fading=True, ceil=True)
+        source_stft = source_stft[:400]
         source_target.append(np.abs(source_stft))
     source_target = np.stack(source_target, axis=2)
     source_sigs = np.stack(source_sigs, axis=0)
@@ -58,8 +71,7 @@ def prepare_feat(data_dir, file_name):
     source_label = np.eye(num_spkrs)[argmax_idx]
     source_label = np.reshape(source_label, [seq_len, feat_len, num_spkrs])
     group_data = ([[spatial_feats]], [[mixture_magn]], [[source_target]], [[seq_len]],[[silence_mask]],[[source_label]])
-
-    return group_data, mixture_magn, mixture_phase, mixture_sig, source_sigs
+    return group_data, mixture_magn, mixture_phase, mixture_sig[:length], source_sigs[:,:length]
 
 if __name__ == "__main__":
     num_gpu = 1
@@ -92,12 +104,14 @@ if __name__ == "__main__":
                 for file_idx, file_name in enumerate(mixture_lst):
                     group_data, mix_magn, mix_phase, mix_sig, src_sigs = prepare_feat(
                         test_dir, file_name)
+                    if(mix_magn.shape[0] < 400):
+                        continue
                     # get embedding
                     #recon_magn = model.get_pred(group_data)
                     #sig_len = len(mix_sig)
                     #print(np.array(recon_magn).shape)
                     #recon_magn = recon_magn[0][0]
-                    
+                    print(src_sigs.shape) 
                     embed = model.get_pred(group_data)
                     embed = embed[0][0]
                     sig_len = len(mix_sig)
