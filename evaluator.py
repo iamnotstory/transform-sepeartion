@@ -15,6 +15,14 @@ from sklearn.cluster import KMeans
 
 tf.logging.set_verbosity(tf.logging.ERROR)
 
+def get_gw_matrix(length):
+    res=[]
+    for i in range(length):
+        tmp=[]
+        for t in range(length):
+            tmp.append(-np.abs(i-t)**2)
+        res.append(tmp)
+    return np.array(res)
 def prepare_feat(data_dir, file_name):
     target_channel = cfg.target_channel
     target_dir = cfg.target_dir
@@ -27,7 +35,7 @@ def prepare_feat(data_dir, file_name):
     total_sig = read_wav(mixture_file, samp_rate=cfg.samp_rate)
     mixture_sig = total_sig[0]
     mixture_stft = stft(mixture_sig, cfg.frame_size, cfg.shift, fading=True, ceil=True)
-    mixture_stft = mixture_stft[:400]
+    mixture_stft = mixture_stft
 
 
 
@@ -36,7 +44,6 @@ def prepare_feat(data_dir, file_name):
     
     mixture_sig_recon = get_recon_sig(mixture_magn, mixture_phase, cfg.frame_size, cfg.shift, fading=True)
     length = mixture_sig_recon.shape[0]
-    print(length)
     threshold = 10 ** (cfg.threshold/20.0) * np.max(mixture_magn)
     silence_mask = (mixture_magn > threshold)
     # read from refer channels
@@ -46,7 +53,7 @@ def prepare_feat(data_dir, file_name):
         #refer_sig = read_wav(refer_file, samp_rate=cfg.samp_rate)
         refer_sig = total_sig[ch]
         refer_stft = stft(refer_sig, cfg.frame_size, cfg.shift, fading=True, ceil=True)
-        refer_stft = refer_stft[:400]
+        refer_stft = refer_stft
 
 
         refer_phase = np.angle(refer_stft)
@@ -62,7 +69,7 @@ def prepare_feat(data_dir, file_name):
         source_sig = read_wav(source_path, samp_rate=cfg.samp_rate)[0]
         source_sigs.append(source_sig)
         source_stft = stft(source_sig, cfg.frame_size, cfg.shift, fading=True, ceil=True)
-        source_stft = source_stft[:400]
+        source_stft = source_stft
         source_target.append(np.abs(source_stft))
     source_target = np.stack(source_target, axis=2)
     source_sigs = np.stack(source_sigs, axis=0)
@@ -70,8 +77,27 @@ def prepare_feat(data_dir, file_name):
     seq_len, feat_len = mixture_magn.shape
     source_label = np.eye(num_spkrs)[argmax_idx]
     source_label = np.reshape(source_label, [seq_len, feat_len, num_spkrs])
-    group_data = ([[spatial_feats]], [[mixture_magn]], [[source_target]], [[seq_len]],[[silence_mask]],[[source_label]])
-    return group_data, mixture_magn, mixture_phase, mixture_sig[:length], source_sigs[:,:length]
+    gw_matrix=get_gw_matrix(source_stft.shape[0])
+    i = 0 
+    seq_len= mixture_magn.shape[0]
+    group_data_seg = []
+    if(seq_len > 400):
+        while(i + 400 < seq_len):
+            gw_matrix = get_gw_matrix(400)
+            group_tmp = ([[spatial_feats[i:i+400]]], [[mixture_magn[i:i+400]]], [[source_target[i:i+400]]],[[400]], [[silence_mask[i:i+400]]],[[source_label[i:i+400]]], [[gw_matrix]])
+            group_data_seg.append(group_tmp)
+            i = i + 100
+        if(i < seq_len):
+            i=seq_len - 400
+            gw_matrix = get_gw_matrix(seq_len - i)
+            group_tmp = ([[spatial_feats[i:]]], [[mixture_magn[i:]]], [[source_target[i:]]],[[seq_len - i]], [[silence_mask[i:]]],[[source_label[i:]]], [[gw_matrix]])
+            group_data_seg.append(group_tmp)
+    else:
+        gw_matrix = get_gw_matrix(seq_len)
+        group_tmp = ([[spatial_feats]], [[mixture_magn]], [[source_target]], [[seq_len]], [[silence_mask]], [[source_label]], [[gw_matrix]])
+        group_data_seg.append(group_tmp)
+    #group_data = ([[spatial_feats]], [[mixture_magn]], [[source_target]], [[seq_len]],[[silence_mask]],[[source_label]], [[gw_matrix]])
+    return group_data_seg, mixture_magn, mixture_phase, mixture_sig, source_sigs
 
 if __name__ == "__main__":
     num_gpu = 1
@@ -102,25 +128,47 @@ if __name__ == "__main__":
                 model.restore_model()
                 num = 0
                 for file_idx, file_name in enumerate(mixture_lst):
-                    group_data, mix_magn, mix_phase, mix_sig, src_sigs = prepare_feat(
+                    group_data_seg, mix_magn, mix_phase, mix_sig, src_sigs = prepare_feat(
                         test_dir, file_name)
-                    if(mix_magn.shape[0] < 400):
-                        continue
+                    block_size = len(group_data_seg)
+                    recon_magn = np.zeros((mix_magn.shape[0], mix_magn.shape[1], num_spkrs))
+                    for i in range(block_size):
+                        embed_tmp = model.get_pred(group_data_seg[i])
+                        embed_tmp = embed_tmp[0][0]
+                        seq_len, feat_dim, embed_dim = embed_tmp.shape
+                        flat_embed = np.reshape(embed_tmp, [-1, embed_dim])
+                        kmeans = KMeans(n_clusters = num_spkrs, random_state=0).fit(flat_embed)
+                        pred_labels = np.eye(num_spkrs)[kmeans.labels_]
+                        pred_labels = np.reshape(pred_labels, [seq_len, feat_dim , num_spkrs])
+                        if(i==(block_size - 1)):
+                            if(seq_len < 400):
+                                recon_magn_tmp = pred_labels * np.expand_dims(mix_magn, axis = 2)
+                                recon_magn = recon_magn_tmp
+                            else:
+                                recon_magn_tmp = pred_labels * np.expand_dims(mix_magn[mix_magn.shape[0]-400:],axis = 2)
+                                recon_magn[i*100 + 400:] = recon_magn_tmp[recon_magn_tmp.shape[0] - recon_magn.shape[0] + i*400:]
+                        else:
+                            if(i==0):
+                                recon_magn_tmp = pred_labels * np.expand_dims(mix_magn[i * 100: i * 100 + 400] , axis = 2)
+                                recon_magn[i*100:i * 100 + 400] = recon_magn_tmp
+                            else:
+                                recon_magn_tmp=pred_labels * np.expand_dims(mix_magn[i * 100:i*100 + 400], axis = 2)
+                                recon_magn[i*100 + 100: i*100 + 300] = recon_magn_tmp[200:400]
+
                     # get embedding
                     #recon_magn = model.get_pred(group_data)
-                    #sig_len = len(mix_sig)
+                    sig_len = len(mix_sig)
                     #print(np.array(recon_magn).shape)
                     #recon_magn = recon_magn[0][0]
-                    print(src_sigs.shape) 
-                    embed = model.get_pred(group_data)
-                    embed = embed[0][0]
-                    sig_len = len(mix_sig)
-                    seq_len, feat_dim, embed_dim = embed.shape
-                    flat_embed = np.reshape(embed, [-1, embed_dim])
-                    kmeans = KMeans(n_clusters = num_spkrs, random_state = 0).fit(flat_embed)
-                    pred_labels = np.eye(num_spkrs)[kmeans.labels_]
-                    pred_labels = np.reshape(pred_labels, [seq_len, feat_dim, num_spkrs])
-                    recon_magn = pred_labels *np.expand_dims(mix_magn, axis = 2)
+                    #embed = model.get_pred(group_data)
+                    #embed = embed[0][0]
+                    #sig_len = len(mix_sig)
+                    #seq_len, feat_dim, embed_dim = embed.shape
+                    #flat_embed = np.reshape(embed, [-1, embed_dim])
+                    #kmeans = KMeans(n_clusters = num_spkrs, random_state = 0).fit(flat_embed)
+                    #pred_labels = np.eye(num_spkrs)[kmeans.labels_]
+                    #pred_labels = np.reshape(pred_labels, [seq_len, feat_dim, num_spkrs])
+                    #recon_magn = pred_labels *np.expand_dims(mix_magn, axis = 2)
                     recon_sigs = []
                     for spkr_i in range(num_spkrs):
                         recon_sig = get_recon_sig(recon_magn[:,:,spkr_i], mix_phase,
