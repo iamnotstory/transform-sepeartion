@@ -71,6 +71,7 @@ class DF_Model(object):
         self._seq_len = []
         self._silence_mask = []
         self._source_label = []
+        self._gw_matrix = []
         self.training = tf.placeholder(tf.bool, shape = [])
         feat_dim = self.config.feat_dim
         num_spkrs = self.config.num_spkrs
@@ -82,6 +83,7 @@ class DF_Model(object):
             self._silence_mask.append(tf.placeholder(tf.float32, shape = [None, None, feat_dim]))
             self._seq_len.append(tf.placeholder(tf.int32, shape=[None]))
             self._source_label.append(tf.placeholder(tf.float32, shape = [None, None, feat_dim, num_spkrs]))
+            self._gw_matrix.append(tf.placeholder(tf.float32, shape = [None, None, None]))
         print("Last Dim of df_feat: {}".format(self._IPD_feat[0].get_shape().as_list()[-1]))
     def cmvn_process(self, IPD, magn):
         if self.cmvn is not None:
@@ -98,26 +100,26 @@ class DF_Model(object):
         self.latest_loss = 0.0
         self.epoch_counter += 1
 
-    def gw_encoding(self, length, time_step, batch_size):
-        cfg = self.config
-        res = []
-        for i in range(length):
-            tmp = []
-            for t in range(length):
-                tmp.append(-np.abs(i - t) ** 2)
-            res.append(tmp)
-        res = np.array(res)
+    def gw_encoding(self, gw_matrix):
+        #cfg = self.config
+        #res = []
+        #for i in range(length):
+        #    tmp = []
+        #    for t in range(length):
+        #        tmp.append(-np.abs(i - t) ** 2)
+        #    res.append(tmp)
+        #res = np.array(res)
         
 
         yeta = tf.get_variable(name='eta', shape = [1], dtype = tf.float32)
-        res = tf.exp(res / tf.square(yeta))
+        res = tf.exp(gw_matrix / tf.square(yeta))
 
-        gw_ind = tf.tile(tf.expand_dims(tf.range(time_step),0), [batch_size, 1])
-        gw_enc = tf.convert_to_tensor(res, tf.float32)
+        #gw_ind = tf.tile(tf.expand_dims(tf.range(time_step),0), [batch_size, 1])
+        #gw_enc = tf.convert_to_tensor(res, tf.float32)
         #gw_ind_ = tf.tile(tf.expand_dims(0,tf.range(time_step)),[batch_size, 1])
-        outputs = tf.nn.embedding_lookup(gw_enc, gw_ind)
+        #outputs = tf.nn.embedding_lookup(gw_enc, gw_ind)
         #outputs = tf.nn.embedding_lookup(outputs, gw_ind_)
-        return tf.to_float(outputs)
+        return res
     def multihead_attention(self, feat_input):
         cfg = self.config
         total_units = cfg.transformer_total_units
@@ -131,7 +133,7 @@ class DF_Model(object):
                 Q = tf.layers.dense(feat_input, num_units, activation = None, name = 'Q', use_bias = None)
                 K = tf.layers.dense(feat_input, num_units, activation = None, name = 'K', use_bias = None)
                 V = tf.layers.dense(feat_input, num_units, activation = None, name = 'V', use_bias = None)
-                gw = self.gw_encoding(cfg.longer_sent_len, time_step, batch_size)
+                gw = self.gw_encoding(self._gw_matrix[0])
                 cl = tf.multiply(tf.matmul(Q, tf.transpose(K, [0,2,1])), 1.0 / math.sqrt(float(num_units)))
                 sl = tf.multiply(gw, cl)
                 sl = tf.abs(sl)
@@ -235,6 +237,14 @@ class DF_Model(object):
         
         V = tf.einsum('btfe,btf->btfe', embedding, mask)
         Y = tf.einsum('btfn,btf->btfn', source_label, mask)
+        V_ = []
+        Y_ = []
+        index = tf.range(200,300)
+        for i in range(self.batch_size):
+            V_.append(tf.nn.embedding_lookup(V[i], index))
+            Y_.append(tf.nn.embedding_loopup(Y[i], index))
+        V = tf.convert_to_tensor(V_)
+        Y = tf.convert_to_tensor(Y_)
         l2_VTV = tf.reduce_sum(tf.einsum('btfe,btfp->bep',V,V)**2/2, axis = [1,2])
         l2_YTY = tf.reduce_sum(tf.einsum('btfn,btfp->bnp',Y,Y)**2/2, axis = [1,2])
         l2_VTY = tf.reduce_sum(tf.einsum('btfe,btfn->ben',V,Y)**2/2, axis = [1,2])
@@ -340,6 +350,7 @@ class DF_Model(object):
                 feed_dict[self._source_label[i]] = group_data[5][i]
             feed_dict[self._seq_len[i]] = group_data[3][i]
             feed_dict[self._silence_mask[i]] = group_data[4][i]
+            feed_dict[self._gw_matrix[i]] = group_data[6][i]
             step_size += len(group_data[3][i])
         start_time = time.time()
         _, i_global, i_merge, loss = self.session.run(
@@ -375,6 +386,7 @@ class DF_Model(object):
                 feed_dict[self._source_label[i]] = group_data[5][i]
             feed_dict[self._seq_len[i]] = group_data[3][i]
             feed_dict[self._silence_mask[i]] = group_data[4][i]
+            feed_dict[self._gw_matrix[i]] = group_data[6][i]
         pred = self.session.run(self.tower_pred, feed_dict=feed_dict)
         return pred
     def get_attention(self, group_data):
@@ -411,6 +423,7 @@ class DF_Model(object):
                         feed_dict[self._source_label[i]] = batch_data[5][i]
                     feed_dict[self._seq_len[i]] = batch_data[3][i]
                     feed_dict[self._silence_mask[i]] = batch_data[4][i]
+                    feed_dict[self._gw_matrix[i]] = batch_data[6][i]
                     num_sent += len(batch_data[3][i])
                 loss = self.session.run(self.avg_cost, feed_dict=feed_dict)
                 total_loss += loss

@@ -50,7 +50,7 @@ lamda = 100.0
 #job_dir = "job/no_pretrain_2layer_nodrop_ipd_anechoic"
 #job_dir = "job/no_preptrain_multidcl1_cmvn_npsm_lambda50"
 #job_dir = "job/original_nreluqkv_1tr_test_50epoch"
-job_dir = "job/gw"
+job_dir = "job/gw_tet"
 #job_dir = "job/original_nreluqkv"
 #job_dir = "job/no_preptrain_multidc_cmvn"
 #job_dir = "job/no_pretrain_2layer_nodrop_multidc"
@@ -75,7 +75,7 @@ fcl_layers = 0
 fcl_hidden_size = 600
 # training param
 seed = 123
-resume = False
+resume = True
 init_mean = 0.0
 init_stddev = 0.02
 max_grad_norm = 200
@@ -99,7 +99,7 @@ test_dir = '/gpfs/share/home/1801213802/data/mixreverb/2speakers_reverb/wav8k/mi
 #test_name = 'test_h1000_load1'
 test_name = 'GW'
 # load option
-load_option = 1
+load_option = 0
 load_path = ""
 stable = False
 silence = False

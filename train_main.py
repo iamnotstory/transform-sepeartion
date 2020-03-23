@@ -31,7 +31,7 @@ if __name__ == "__main__":
     train_reader = SpeechReader(cfg, train_dir, max_sent_len=init_max_len,
                                 min_sent_len=cfg.min_sent_len, num_gpu=num_gpu, job_type="train")
     dev_reader = SpeechReader(cfg, dev_dir, batch_size=cfg.dev_batch_size, max_sent_len=init_max_len,
-                              num_gpu=num_gpu, min_sent_len=cfg.min_sent_len, job_type="dev")
+                              num_gpu=num_gpu, min_sent_len=cfg.min_sent_len, job_type="train")
     try:
         with tf.Graph().as_default():
             loss_checker = checker(cfg)
@@ -63,7 +63,7 @@ if __name__ == "__main__":
                         else:
                             #loss_checker.learning_rate = 0.001
                             i_global = model.run_batch(batch_data, loss_checker.learning_rate)
-                            if i_global % cfg.dev_period == 0 and i_epoch > 40:
+                            if i_global % cfg.dev_period == 0 and i_epoch >= 0:
                                 avg_loss = model.valid(dev_reader)
                                 loss_improved, best_loss = loss_checker.update(sess, avg_loss)
                                 if loss_improved:

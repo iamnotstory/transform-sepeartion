@@ -81,7 +81,15 @@ class SpeechReader(object):
             self.shuffle_data_list()
         self._producer = Producer(self)
         self._producer.start()
-
+    
+    def get_gw_matrix(self, length):
+        res=[]
+        for i in range(length):
+            tmp=[]
+            for t in range(length):
+                tmp.append(-np.abs(i-t)**2)
+            res.append(tmp)
+        return np.array(res)
     def load_one_mixture(self, file_name):
         target_channel = self.config.target_channel
         target_dir = self.config.target_dir
@@ -141,11 +149,12 @@ class SpeechReader(object):
         source_label = np.eye(num_spkrs)[argmax_idx]
         source_label = np.reshape(source_label, [seq_len, feat_len, num_spkrs])
         i = 0
+        gw_matrix = self.get_gw_matrix(400)
         # shape is [T, F]
         while self.max_sent_len > 0 and i + self.max_sent_len <= seq_len:
             one_sample = (spatial_feats[i:i+self.max_sent_len],
                           mixture_magn[i:i+self.max_sent_len],
-                          source_target[i:i+self.max_sent_len], self.max_sent_len, silence_mask[i:i+self.max_sent_len], source_label[i:i+self.max_sent_len])
+                          source_target[i:i+self.max_sent_len], self.max_sent_len, silence_mask[i:i+self.max_sent_len], source_label[i:i+self.max_sent_len], gw_matrix)
             sample_list.append(one_sample)
             i += (1 - self.config.overlap_rate) * self.max_sent_len
         if seq_len - i >= self.min_sent_len and self.job_type != "train":
@@ -173,6 +182,7 @@ class SpeechReader(object):
             group_seq_len = []
             group_silence_mask = []
             group_source_label = []
+            group_gw_matrix = []
             for i in range(0, group_size, batch_size):
                 one_batch = one_group[i:i+batch_size]
                 max_len = int(max(map(lambda x: x[3], one_batch)))
@@ -182,7 +192,7 @@ class SpeechReader(object):
                 batch_seq_len = np.zeros(batch_size, dtype=np.int32)
                 batch_silence_mask = np.zeros((batch_size, max_len, feat_dim), dtype = np.bool)
                 batch_source_label = np.zeros((batch_size, max_len, feat_dim, num_spkrs), dtype = np.float32)
-
+                batch_gw_matrix = np.zeros((batch_size, one_batch[0][3], one_batch[0][3]),dtype = np.float32)
                 for j in range(batch_size):
                     this_len = one_batch[j][3]
                     batch_seq_len[j] = this_len
@@ -191,14 +201,15 @@ class SpeechReader(object):
                     batch_source[j, 0:this_len, :, :] = one_batch[j][2]
                     batch_silence_mask[j,0:this_len,:] = one_batch[j][4]
                     batch_source_label[j, 0:this_len,:] = one_batch[j][5]
-
+                    batch_gw_matrix[j,0:400,0:400]= one_batch[j][6]
                 group_silence_mask.append(batch_silence_mask)
                 group_IPD.append(batch_IPD)
                 group_source.append(batch_source)
                 group_MAGN.append(batch_MAGN)
                 group_seq_len.append(batch_seq_len)
                 group_source_label.append(batch_source_label)
-            group_list.append((group_IPD, group_MAGN, group_source, group_seq_len,group_silence_mask,group_source_label))
+                group_gw_matrix.append(batch_gw_matrix)
+            group_list.append((group_IPD, group_MAGN, group_source, group_seq_len,group_silence_mask,group_source_label, group_gw_matrix))
         return group_list
 
     def load_samples(self):
