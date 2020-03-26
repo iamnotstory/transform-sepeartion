@@ -139,6 +139,7 @@ class DF_Model(object):
                 sl = tf.abs(sl)
                 sl = tf.nn.softmax(sl)
                 attention_probs = sl
+                sl = tf.transpose(sl, [0,2,1])
                 attention_out_one = tf.matmul(sl, V)
                 attention_out.append(attention_out_one)
                 #attention_probs = tf.nn.softmax(tf.multiply(tf.matmul(Q,K, transpose_b = True), 1.0/ math.sqrt(float(num_units))))
