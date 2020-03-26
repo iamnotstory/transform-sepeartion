@@ -189,7 +189,7 @@ class DF_Model(object):
         
         with tf.variable_scope('embedding'):
             feat_input = self.transformer(feat_input)
-            s_project = tf.layers.dense(feat_input, project_size, activation = tf.nn.tanh, name = 'emb', use_bias = True)
+            s_project = tf.layers.dense(feat_input, project_size, activation = tf.nn.relu, name = 'emb', use_bias = True)
             embedding = tf.reshape(s_project, [batch_size, time_step, feat_dim, E])
             norm_embedding = tf.nn.l2_normalize(embedding, 3)
         return norm_embedding
