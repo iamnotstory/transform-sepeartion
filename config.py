@@ -99,7 +99,7 @@ test_dir = '/gpfs/share/home/1801213802/data/mixreverb/2speakers_reverb/wav8k/mi
 #test_name = 'test_h1000_load1'
 test_name = 'GW'
 # load option
-load_option = 0
+load_option = 1
 load_path = ""
 stable = False
 silence = False
