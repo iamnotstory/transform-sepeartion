@@ -238,14 +238,14 @@ class DF_Model(object):
         
         V = tf.einsum('btfe,btf->btfe', embedding, mask)
         Y = tf.einsum('btfn,btf->btfn', source_label, mask)
-        V_ = []
-        Y_ = []
-        index = tf.range(100,300)
-        for i in range(self.config.batch_size):
-            V_.append(tf.nn.embedding_lookup(V[i], index))
-            Y_.append(tf.nn.embedding_lookup(Y[i], index))
-        V = tf.convert_to_tensor(V_)
-        Y = tf.convert_to_tensor(Y_)
+        #V_ = []
+        #Y_ = []
+        #index = tf.range(100,300)
+        #for i in range(self.config.batch_size):
+        #    V_.append(tf.nn.embedding_lookup(V[i], index))
+        #    Y_.append(tf.nn.embedding_lookup(Y[i], index))
+        #V = tf.convert_to_tensor(V_)
+        #Y = tf.convert_to_tensor(Y_)
         l2_VTV = tf.reduce_sum(tf.einsum('btfe,btfp->bep',V,V)**2/2, axis = [1,2])
         l2_YTY = tf.reduce_sum(tf.einsum('btfn,btfp->bnp',Y,Y)**2/2, axis = [1,2])
         l2_VTY = tf.reduce_sum(tf.einsum('btfe,btfn->ben',V,Y)**2/2, axis = [1,2])
@@ -272,7 +272,7 @@ class DF_Model(object):
         magn = tf.log(1 + magn)
         input_feat = tf.concat([IPD, magn], axis = 2)
         seq_mask = self.get_seq_mask(time_step, seq_len)
-        count_bins = tf.cast(seq_len/2 * feat_dim, tf.float32)
+        count_bins = tf.cast(seq_len * feat_dim, tf.float32)
         silence_mask = tf.cast(silence_mask, tf.float32)
         masks = tf.einsum('bt,btf->btf', seq_mask, silence_mask)
         #if self.config.DC_new == False:
