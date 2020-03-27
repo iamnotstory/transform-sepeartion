@@ -50,7 +50,7 @@ lamda = 100.0
 #job_dir = "job/no_pretrain_2layer_nodrop_ipd_anechoic"
 #job_dir = "job/no_preptrain_multidcl1_cmvn_npsm_lambda50"
 #job_dir = "job/original_nreluqkv_1tr_test_50epoch"
-job_dir = "job/gw_change_relu"
+job_dir = "job/gw_tet_change_relu"
 #job_dir = "job/original_nreluqkv"
 #job_dir = "job/no_preptrain_multidc_cmvn"
 #job_dir = "job/no_pretrain_2layer_nodrop_multidc"
@@ -75,7 +75,7 @@ fcl_layers = 0
 fcl_hidden_size = 600
 # training param
 seed = 123
-resume = False
+resume = True
 init_mean = 0.0
 init_stddev = 0.02
 max_grad_norm = 200
