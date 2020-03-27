@@ -81,23 +81,23 @@ def prepare_feat(data_dir, file_name):
     i = 0 
     seq_len= mixture_magn.shape[0]
     group_data_seg = []
-    if(seq_len > 400):
-        while(i + 400 < seq_len):
-            gw_matrix = get_gw_matrix(400)
-            group_tmp = ([[spatial_feats[i:i+400]]], [[mixture_magn[i:i+400]]], [[source_target[i:i+400]]],[[400]], [[silence_mask[i:i+400]]],[[source_label[i:i+400]]], [[gw_matrix]])
-            group_data_seg.append(group_tmp)
-            i = i + 100
-        if(i < seq_len):
-            i=seq_len - 400
-            gw_matrix = get_gw_matrix(seq_len - i)
-            group_tmp = ([[spatial_feats[i:]]], [[mixture_magn[i:]]], [[source_target[i:]]],[[seq_len - i]], [[silence_mask[i:]]],[[source_label[i:]]], [[gw_matrix]])
-            group_data_seg.append(group_tmp)
-    else:
-        gw_matrix = get_gw_matrix(seq_len)
-        group_tmp = ([[spatial_feats]], [[mixture_magn]], [[source_target]], [[seq_len]], [[silence_mask]], [[source_label]], [[gw_matrix]])
-        group_data_seg.append(group_tmp)
-    #group_data = ([[spatial_feats]], [[mixture_magn]], [[source_target]], [[seq_len]],[[silence_mask]],[[source_label]], [[gw_matrix]])
-    return group_data_seg, mixture_magn, mixture_phase, mixture_sig, source_sigs
+    #if(seq_len > 400):
+    #    while(i + 400 < seq_len):
+    #        gw_matrix = get_gw_matrix(400)
+    #        group_tmp = ([[spatial_feats[i:i+400]]], [[mixture_magn[i:i+400]]], [[source_target[i:i+400]]],[[400]], [[silence_mask[i:i+400]]],[[source_label[i:i+400]]], [[gw_matrix]])
+    #        group_data_seg.append(group_tmp)
+    #        i = i + 100
+    #    if(i < seq_len):
+    #        i=seq_len - 400
+    #        gw_matrix = get_gw_matrix(seq_len - i)
+    #        group_tmp = ([[spatial_feats[i:]]], [[mixture_magn[i:]]], [[source_target[i:]]],[[seq_len - i]], [[silence_mask[i:]]],[[source_label[i:]]], [[gw_matrix]])
+    #        group_data_seg.append(group_tmp)
+    #else:
+    #    gw_matrix = get_gw_matrix(seq_len)
+    #    group_tmp = ([[spatial_feats]], [[mixture_magn]], [[source_target]], [[seq_len]], [[silence_mask]], [[source_label]], [[gw_matrix]])
+    #    group_data_seg.append(group_tmp)
+    group_data = ([[spatial_feats]], [[mixture_magn]], [[source_target]], [[seq_len]],[[silence_mask]],[[source_label]], [[gw_matrix]])
+    return group_data, mixture_magn, mixture_phase, mixture_sig, source_sigs
 
 if __name__ == "__main__":
     num_gpu = 1
@@ -130,106 +130,106 @@ if __name__ == "__main__":
                 for file_idx, file_name in enumerate(mixture_lst):
                     group_data_seg, mix_magn, mix_phase, mix_sig, src_sigs = prepare_feat(
                         test_dir, file_name)
-                    block_size = len(group_data_seg)
-                    #recon_magn = np.zeros((mix_magn.shape[0], mix_magn.shape[1], num_spkrs))
-                    pred_labels_ = np.zeros([mix_magn.shape[0], mix_magn.shape[1], num_spkrs])
-                    #embed = np.zeros([mix_magn.shape[0], mix_magn.shape[1], cfg.embedding_dim])
-                    for i in range(block_size):
-                        embed_tmp = model.get_pred(group_data_seg[i])
-                        embed_tmp = embed_tmp[0][0]
-                        seq_len, feat_dim, embed_dim = embed_tmp.shape
-                        flat_embed = np.reshape(embed_tmp, [-1, embed_dim])
-                        kmeans = KMeans(n_clusters = num_spkrs, random_state=0).fit(flat_embed)
-                        pred_labels = np.eye(num_spkrs)[kmeans.labels_]
-                        pred_labels = np.reshape(pred_labels, [seq_len, feat_dim , num_spkrs])
-                        if(i==(block_size - 1)):
-                            if(seq_len < 400):
-                                recon_magn_tmp = pred_labels * np.expand_dims(mix_magn, axis = 2)
-                                pred_labels_ = pred_labels
-                                mix_phase_tmp = mix_phase
-                            else:
-                                recon_magn_tmp = pred_labels * np.expand_dims(mix_magn[mix_magn.shape[0]-400:],axis = 2)
-                                mix_phase_tmp = mix_phase[mix_magn.shape[0] - 400 : ]
-                                #pred_labels_[i * 100 + 100:] = pred_labels[pred_labels.shape[0] - (mix_magn.shape[0]  - i * 100 -100): ]
-                                
-                                
-                                tmp1 = np.sum((pred_labels_[i*100 + 100: i * 100 + 200,:,0] - pred_labels[pred_labels.shape[0] - (mix_magn.shape[0]  - i * 100 -100):pred_labels.shape[0] - (mix_magn.shape[0]  - i * 100 -100)+ 100,:,0]) ** 2) #+ np.sum((pred_labels_[i*100: i * 100 + 200,1] - pred_labels[0:200,1]) ** 2)
-                                tmp2 = np.sum((pred_labels_[i*100 + 100: i * 100 + 200,:,0] - pred_labels[pred_labels.shape[0] - (mix_magn.shape[0]  - i * 100 -100):pred_labels.shape[0] - (mix_magn.shape[0]  - i * 100 -100)+100,:,1]) ** 2) #+ np.sum((pred_labels_[i*100: i * 100 + 200,1] - pred_labels[0:200,0]) ** 2)
-                                if(tmp1 < tmp2):
-                                    pred_labels_[i * 100 + 100: ] = pred_labels[pred_labels.shape[0] - (mix_magn.shape[0]  - i * 100 -100):]
-                                else:
-                                    pred_labels_[i * 100 + 100:,:, 1] = pred_labels[pred_labels.shape[0] - (mix_magn.shape[0]  - i * 100 -100):,:,0]
-                                    pred_labels_[i * 100 + 100:,:, 0] = pred_labels[pred_labels.shape[0] - (mix_magn.shape[0]  - i * 100 -100):,:, 1]
-                                #tmp1 = np.sum((recon_magn[i * 100 : i * 100 + 200, 0] - recon_magn_tmp[recon_magn_tmp.shape[0] - (recon_magn.shape[0] - i*100 - 100)-100 : recon_magn_tmp.shape[0] - (recon_magn.shape[0] - i*100 - 100)+100,0]) ** 2) + np.sum((recon_magn[i * 100 : i * 100 + 200, 1] - recon_magn_tmp[recon_magn_tmp.shape[0] - (recon_magn.shape[0] - i*100 - 100)-100 : recon_magn_tmp.shape[0] - (recon_magn.shape[0] - i*100 - 100)+100,1]) ** 2)
-                                #tmp2 = np.sum((recon_magn[i * 100 : i * 100 + 200, 0] - recon_magn_tmp[recon_magn_tmp.shape[0] - (recon_magn.shape[0] - i*100 - 100)-100 : recon_magn_tmp.shape[0] - (recon_magn.shape[0] - i*100 - 100)+100, 1]) ** 2) + np.sum((recon_magn[i * 100 : i * 100 + 200, 0] - recon_magn_tmp[recon_magn_tmp.shape[0] - (recon_magn.shape[0] - i*100 - 100)-100 : recon_magn_tmp.shape[0] - (recon_magn.shape[0] - i*100 - 100)+100,1]) ** 2)
-                                #if(tmp1 < tmp2):
-                                #    #recon_magn[i*100 + 100: i*100 + 300] = recon_magn_tmp[100:300]
-                                #    recon_magn[i*100 + 100:] = recon_magn_tmp[recon_magn_tmp.shape[0] - (recon_magn.shape[0] - i*100 - 100):]
-                                #else:
+                    #block_size = len(group_data_seg)
+                    ##recon_magn = np.zeros((mix_magn.shape[0], mix_magn.shape[1], num_spkrs))
+                    #pred_labels_ = np.zeros([mix_magn.shape[0], mix_magn.shape[1], num_spkrs])
+                    ##embed = np.zeros([mix_magn.shape[0], mix_magn.shape[1], cfg.embedding_dim])
+                    #for i in range(block_size):
+                    #    embed_tmp = model.get_pred(group_data_seg[i])
+                    #    embed_tmp = embed_tmp[0][0]
+                    #    seq_len, feat_dim, embed_dim = embed_tmp.shape
+                    #    flat_embed = np.reshape(embed_tmp, [-1, embed_dim])
+                    #    kmeans = KMeans(n_clusters = num_spkrs, random_state=0).fit(flat_embed)
+                    #    pred_labels = np.eye(num_spkrs)[kmeans.labels_]
+                    #    pred_labels = np.reshape(pred_labels, [seq_len, feat_dim , num_spkrs])
+                    #    if(i==(block_size - 1)):
+                    #        if(seq_len < 400):
+                    #            recon_magn_tmp = pred_labels * np.expand_dims(mix_magn, axis = 2)
+                    #            pred_labels_ = pred_labels
+                    #            mix_phase_tmp = mix_phase
+                    #        else:
+                    #            recon_magn_tmp = pred_labels * np.expand_dims(mix_magn[mix_magn.shape[0]-400:],axis = 2)
+                    #            mix_phase_tmp = mix_phase[mix_magn.shape[0] - 400 : ]
+                    #            #pred_labels_[i * 100 + 100:] = pred_labels[pred_labels.shape[0] - (mix_magn.shape[0]  - i * 100 -100): ]
+                    #            
+                    #            
+                    #            tmp1 = np.sum((pred_labels_[i*100 + 100: i * 100 + 200,:,0] - pred_labels[pred_labels.shape[0] - (mix_magn.shape[0]  - i * 100 -100):pred_labels.shape[0] - (mix_magn.shape[0]  - i * 100 -100)+ 100,:,0]) ** 2) #+ np.sum((pred_labels_[i*100: i * 100 + 200,1] - pred_labels[0:200,1]) ** 2)
+                    #            tmp2 = np.sum((pred_labels_[i*100 + 100: i * 100 + 200,:,0] - pred_labels[pred_labels.shape[0] - (mix_magn.shape[0]  - i * 100 -100):pred_labels.shape[0] - (mix_magn.shape[0]  - i * 100 -100)+100,:,1]) ** 2) #+ np.sum((pred_labels_[i*100: i * 100 + 200,1] - pred_labels[0:200,0]) ** 2)
+                    #            if(tmp1 < tmp2):
+                    #                pred_labels_[i * 100 + 100: ] = pred_labels[pred_labels.shape[0] - (mix_magn.shape[0]  - i * 100 -100):]
+                    #            else:
+                    #                pred_labels_[i * 100 + 100:,:, 1] = pred_labels[pred_labels.shape[0] - (mix_magn.shape[0]  - i * 100 -100):,:,0]
+                    #                pred_labels_[i * 100 + 100:,:, 0] = pred_labels[pred_labels.shape[0] - (mix_magn.shape[0]  - i * 100 -100):,:, 1]
+                    #            #tmp1 = np.sum((recon_magn[i * 100 : i * 100 + 200, 0] - recon_magn_tmp[recon_magn_tmp.shape[0] - (recon_magn.shape[0] - i*100 - 100)-100 : recon_magn_tmp.shape[0] - (recon_magn.shape[0] - i*100 - 100)+100,0]) ** 2) + np.sum((recon_magn[i * 100 : i * 100 + 200, 1] - recon_magn_tmp[recon_magn_tmp.shape[0] - (recon_magn.shape[0] - i*100 - 100)-100 : recon_magn_tmp.shape[0] - (recon_magn.shape[0] - i*100 - 100)+100,1]) ** 2)
+                    #            #tmp2 = np.sum((recon_magn[i * 100 : i * 100 + 200, 0] - recon_magn_tmp[recon_magn_tmp.shape[0] - (recon_magn.shape[0] - i*100 - 100)-100 : recon_magn_tmp.shape[0] - (recon_magn.shape[0] - i*100 - 100)+100, 1]) ** 2) + np.sum((recon_magn[i * 100 : i * 100 + 200, 0] - recon_magn_tmp[recon_magn_tmp.shape[0] - (recon_magn.shape[0] - i*100 - 100)-100 : recon_magn_tmp.shape[0] - (recon_magn.shape[0] - i*100 - 100)+100,1]) ** 2)
+                    #            #if(tmp1 < tmp2):
+                    #            #    #recon_magn[i*100 + 100: i*100 + 300] = recon_magn_tmp[100:300]
+                    #            #    recon_magn[i*100 + 100:] = recon_magn_tmp[recon_magn_tmp.shape[0] - (recon_magn.shape[0] - i*100 - 100):]
+                    #            #else:
 
-                                #    recon_magn[i*100 + 100::,0] = recon_magn_tmp[recon_magn_tmp.shape[0] - (recon_magn.shape[0] - i*100 - 100)::,1]
-                                #    recon_magn[i*100 + 100::,1] = recon_magn_tmp[recon_magn_tmp.shape[0] - (recon_magn.shape[0] - i*100 - 100)::,0]
-                                
-                                
-                                #recon_magn[i*100 + 100:] = recon_magn_tmp[recon_magn_tmp.shape[0] - (recon_magn.shape[0] - i*100 - 100):]
-                                #embed[i*100 + 400:] = embed_tmp[embed.shape[0] - embed_tmp.shape[0] + i * 400:]
-                        else:
-                            if(i==0):
-                                recon_magn_tmp = pred_labels * np.expand_dims(mix_magn[i * 100: i * 100 + 400] , axis = 2)
-                                mix_phase_tmp = mix_phase[i * 100 : i * 100 + 400]
-                                pred_labels_[i * 100 : i * 100 + 400] = pred_labels
-                                #recon_magn[i*100:i * 100 + 400] = recon_magn_tmp
-                                #embed[i*100: i * 100 + 400] = embed_tmp
-                            else:
-                                recon_magn_tmp=pred_labels * np.expand_dims(mix_magn[i * 100:i*100 + 400], axis = 2)
-                                mix_phase_tmp = mix_phase[i * 100 : i*100 + 400]
-                                tmp1 = np.sum((pred_labels_[i*100: i * 100 + 200,:,0] - pred_labels[0:200,:,0]) ** 2) #+ np.sum((pred_labels_[i*100: i * 100 + 200,1] - pred_labels[0:200,1]) ** 2)
-                                tmp2 = np.sum((pred_labels_[i*100: i * 100 + 200,:,1] - pred_labels[0:200,:,0]) ** 2) #+ np.sum((pred_labels_[i*100: i * 100 + 200,1] - pred_labels[0:200,0]) ** 2)
-                                #print(np.sum((pred_labels_[i*100: i * 100 + 200,0] - pred_labels[0:200,0]) ** 2))
-                                #print(np.sum((pred_labels_[i*100: i * 100 + 200,0] - pred_labels[0:200,1]) ** 2))  
-                                if(tmp1 < tmp2):
-                                    pred_labels_[i * 100 + 100: i * 100 + 300] = pred_labels[100 :300]
-                                else:
-                                    pred_labels_[i * 100 + 100: i* 100 + 300,:,1] = pred_labels[100:300,:,0]
-                                    pred_labels_[i * 100 + 100: i * 100 + 300,:, 0] = pred_labels[100:300,:, 1]
-                                #tmp1 = np.sum((recon_magn[i * 100 : i * 100 + 200, 0] - recon_magn_tmp[0:200,0]) ** 2) + np.sum((recon_magn[i * 100 : i * 100 + 200, 1] - recon_magn_tmp[0:200,1]) ** 2)
-                                #tmp2 = np.sum((recon_magn[i * 100 : i * 100 + 200, 0] - recon_magn_tmp[0:200, 1]) ** 2) + np.sum((recon_magn[i * 100 : i * 100 + 200, 0] - recon_magn_tmp[0:200,1]) ** 2)
-                                #print('one')
-                                #print(tmp1)
-                                #print(tmp2)
-                                #if(tmp1 < tmp2):
-                                #recon_magn[i*100 + 100: i*100 + 300] = recon_magn_tmp[100:300]
-                                #else:
-                                #    recon_magn[i*100 + 100 : i*100 + 300,0] = recon_magn_tmp[100:300,1]
-                                #    recon_magn[i * 100 + 100 : i*100 + 300, 1] = recon_magn_tmp[100:300,0]
-                                #embed[i*100 + 100 : i * 100 + 300] = embed_tmp[200:400]
-                                
-                        #recon_sigs=[]
-                        #for spkr_i in range(num_spkrs):
-                        #    recon_sig = get_recon_sig(recon_magn_tmp[:,:,spkr_i], mix_phase_tmp, cfg.frame_size, cfg.shift, fading = True)
-                        #    dst_path = os.path.join(est_dir, "s%d"%(spkr_i+1), file_name[:-4] + "_%d"%i+file_name[-4:])
-                        #    audiowrite(dst_path, recon_sig, samp_rate = cfg.samp_rate)
-                    #seq_len,feat_dim,embed_dim = embed.shape
-                    #flat_embed = np.reshape(embed, [-1, embed_dim])
+                    #            #    recon_magn[i*100 + 100::,0] = recon_magn_tmp[recon_magn_tmp.shape[0] - (recon_magn.shape[0] - i*100 - 100)::,1]
+                    #            #    recon_magn[i*100 + 100::,1] = recon_magn_tmp[recon_magn_tmp.shape[0] - (recon_magn.shape[0] - i*100 - 100)::,0]
+                    #            
+                    #            
+                    #            #recon_magn[i*100 + 100:] = recon_magn_tmp[recon_magn_tmp.shape[0] - (recon_magn.shape[0] - i*100 - 100):]
+                    #            #embed[i*100 + 400:] = embed_tmp[embed.shape[0] - embed_tmp.shape[0] + i * 400:]
+                    #    else:
+                    #        if(i==0):
+                    #            recon_magn_tmp = pred_labels * np.expand_dims(mix_magn[i * 100: i * 100 + 400] , axis = 2)
+                    #            mix_phase_tmp = mix_phase[i * 100 : i * 100 + 400]
+                    #            pred_labels_[i * 100 : i * 100 + 400] = pred_labels
+                    #            #recon_magn[i*100:i * 100 + 400] = recon_magn_tmp
+                    #            #embed[i*100: i * 100 + 400] = embed_tmp
+                    #        else:
+                    #            recon_magn_tmp=pred_labels * np.expand_dims(mix_magn[i * 100:i*100 + 400], axis = 2)
+                    #            mix_phase_tmp = mix_phase[i * 100 : i*100 + 400]
+                    #            tmp1 = np.sum((pred_labels_[i*100: i * 100 + 200,:,0] - pred_labels[0:200,:,0]) ** 2) #+ np.sum((pred_labels_[i*100: i * 100 + 200,1] - pred_labels[0:200,1]) ** 2)
+                    #            tmp2 = np.sum((pred_labels_[i*100: i * 100 + 200,:,1] - pred_labels[0:200,:,0]) ** 2) #+ np.sum((pred_labels_[i*100: i * 100 + 200,1] - pred_labels[0:200,0]) ** 2)
+                    #            #print(np.sum((pred_labels_[i*100: i * 100 + 200,0] - pred_labels[0:200,0]) ** 2))
+                    #            #print(np.sum((pred_labels_[i*100: i * 100 + 200,0] - pred_labels[0:200,1]) ** 2))  
+                    #            if(tmp1 < tmp2):
+                    #                pred_labels_[i * 100 + 100: i * 100 + 300] = pred_labels[100 :300]
+                    #            else:
+                    #                pred_labels_[i * 100 + 100: i* 100 + 300,:,1] = pred_labels[100:300,:,0]
+                    #                pred_labels_[i * 100 + 100: i * 100 + 300,:, 0] = pred_labels[100:300,:, 1]
+                    #            #tmp1 = np.sum((recon_magn[i * 100 : i * 100 + 200, 0] - recon_magn_tmp[0:200,0]) ** 2) + np.sum((recon_magn[i * 100 : i * 100 + 200, 1] - recon_magn_tmp[0:200,1]) ** 2)
+                    #            #tmp2 = np.sum((recon_magn[i * 100 : i * 100 + 200, 0] - recon_magn_tmp[0:200, 1]) ** 2) + np.sum((recon_magn[i * 100 : i * 100 + 200, 0] - recon_magn_tmp[0:200,1]) ** 2)
+                    #            #print('one')
+                    #            #print(tmp1)
+                    #            #print(tmp2)
+                    #            #if(tmp1 < tmp2):
+                    #            #recon_magn[i*100 + 100: i*100 + 300] = recon_magn_tmp[100:300]
+                    #            #else:
+                    #            #    recon_magn[i*100 + 100 : i*100 + 300,0] = recon_magn_tmp[100:300,1]
+                    #            #    recon_magn[i * 100 + 100 : i*100 + 300, 1] = recon_magn_tmp[100:300,0]
+                    #            #embed[i*100 + 100 : i * 100 + 300] = embed_tmp[200:400]
+                    #            
+                    #    #recon_sigs=[]
+                    #    #for spkr_i in range(num_spkrs):
+                    #    #    recon_sig = get_recon_sig(recon_magn_tmp[:,:,spkr_i], mix_phase_tmp, cfg.frame_size, cfg.shift, fading = True)
+                    #    #    dst_path = os.path.join(est_dir, "s%d"%(spkr_i+1), file_name[:-4] + "_%d"%i+file_name[-4:])
+                    #    #    audiowrite(dst_path, recon_sig, samp_rate = cfg.samp_rate)
+                    ##seq_len,feat_dim,embed_dim = embed.shape
+                    ##flat_embed = np.reshape(embed, [-1, embed_dim])
 
-                    #kmeans = KMeans(n_clusters = num_spkrs, random_state=0).fit(flat_embed)
-                    #pred_labels = np.eye(num_spkrs)[kmeans.labels_]
-                    #pred_labels = np.reshape(pred_labels, [seq_len, feat_dim, num_spkrs])
-                    recon_magn = pred_labels_ * np.expand_dims(mix_magn, axis = 2)
+                    ##kmeans = KMeans(n_clusters = num_spkrs, random_state=0).fit(flat_embed)
+                    ##pred_labels = np.eye(num_spkrs)[kmeans.labels_]
+                    ##pred_labels = np.reshape(pred_labels, [seq_len, feat_dim, num_spkrs])
+                    #recon_magn = pred_labels_ * np.expand_dims(mix_magn, axis = 2)
                     # get embedding
                     #recon_magn = model.get_pred(group_data)
                     sig_len = len(mix_sig)
                     #print(np.array(recon_magn).shape)
                     #recon_magn = recon_magn[0][0]
-                    #embed = model.get_pred(group_data)
-                    #embed = embed[0][0]
-                    #sig_len = len(mix_sig)
-                    #seq_len, feat_dim, embed_dim = embed.shape
-                    #flat_embed = np.reshape(embed, [-1, embed_dim])
-                    #kmeans = KMeans(n_clusters = num_spkrs, random_state = 0).fit(flat_embed)
-                    #pred_labels = np.eye(num_spkrs)[kmeans.labels_]
-                    #pred_labels = np.reshape(pred_labels, [seq_len, feat_dim, num_spkrs])
-                    #recon_magn = pred_labels *np.expand_dims(mix_magn, axis = 2)
+                    embed = model.get_pred(group_data_seg)
+                    embed = embed[0][0]
+                    sig_len = len(mix_sig)
+                    seq_len, feat_dim, embed_dim = embed.shape
+                    flat_embed = np.reshape(embed, [-1, embed_dim])
+                    kmeans = KMeans(n_clusters = num_spkrs, random_state = 0).fit(flat_embed)
+                    pred_labels = np.eye(num_spkrs)[kmeans.labels_]
+                    pred_labels = np.reshape(pred_labels, [seq_len, feat_dim, num_spkrs])
+                    recon_magn = pred_labels *np.expand_dims(mix_magn, axis = 2)
                     recon_sigs = []
                     for spkr_i in range(num_spkrs):
                         recon_sig = get_recon_sig(recon_magn[:,:,spkr_i], mix_phase,
