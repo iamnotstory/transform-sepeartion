@@ -50,7 +50,7 @@ lamda = 100.0
 #job_dir = "job/no_pretrain_2layer_nodrop_ipd_anechoic"
 #job_dir = "job/no_preptrain_multidcl1_cmvn_npsm_lambda50"
 #job_dir = "job/original_nreluqkv_1tr_test_50epoch"
-job_dir = "job/gw_tet_change_bias"
+job_dir = "job/gw_tet_small_test_add_relu_layer_3"
 #job_dir = "job/original_nreluqkv"
 #job_dir = "job/no_preptrain_multidc_cmvn"
 #job_dir = "job/no_pretrain_2layer_nodrop_multidc"
@@ -111,4 +111,4 @@ job_anechoic = False
 #transformer config
 transformer_total_units = 387
 transformer_heads = 3
-transformer_num_layers = 1
+transformer_num_layers = 3
