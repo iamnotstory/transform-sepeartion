@@ -39,7 +39,7 @@ embedding_dim = 20
 # train & dev dataset
 #train_dir = "/gpfs/share/home/1801213802/data//data/train"
 #dev_dir = "/gpfs/share/home/1801213802/data//data/dev"
-global_cmvn_file = 'list/ipd_magn_net_cmvn_ipd'
+#global_cmvn_file = 'list/ipd_magn_net_cmvn_ipd'
 train_dir = "/gpfs/share/home/1801213802/data/mixreverb/2speakers_reverb/wav8k/min/tr"
 dev_dir = "/gpfs/share/home/1801213802/data/mixreverb/2speakers_reverb/wav8k/min/cv"
 train_anechoic_dir = "/gpfs/share/home/1801213802/data/mixreverb/2speakers_anechoic/wav8k/min/tr"
@@ -50,7 +50,7 @@ lamda = 100.0
 #job_dir = "job/no_pretrain_2layer_nodrop_ipd_anechoic"
 #job_dir = "job/no_preptrain_multidcl1_cmvn_npsm_lambda50"
 #job_dir = "job/original_nreluqkv_1tr_test_50epoch"
-job_dir = "job/gw_tet_small_test_add_relu_layer_3"
+job_dir = "job/gw_tet_add_relu_layer_2_nocmvn"
 #job_dir = "job/original_nreluqkv"
 #job_dir = "job/no_preptrain_multidc_cmvn"
 #job_dir = "job/no_pretrain_2layer_nodrop_multidc"
@@ -99,7 +99,7 @@ test_dir = '/gpfs/share/home/1801213802/data/mixreverb/2speakers_reverb/wav8k/mi
 #test_name = 'test_h1000_load1'
 test_name = 'GW_load_option_1_old'
 # load option
-load_option = 1
+load_option = 0
 load_path = ""
 stable = False
 silence = False
@@ -111,4 +111,4 @@ job_anechoic = False
 #transformer config
 transformer_total_units = 387
 transformer_heads = 3
-transformer_num_layers = 3
+transformer_num_layers = 2
