@@ -68,7 +68,7 @@ class SpeechReader(object):
         file_path = os.path.join(self.data_dir, self.config.target_lst_file)
         with open(file_path, "r") as f:
             data_list = [line.strip().split()[0] for line in f.readlines()]
-        data_list = data_list[::20]
+        #data_list = data_list[::20]
         return data_list
 
     def shuffle_data_list(self):
