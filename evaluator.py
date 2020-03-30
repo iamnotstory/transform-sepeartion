@@ -127,6 +127,17 @@ if __name__ == "__main__":
                 model = DF_Model(sess, cfg, num_gpu)
                 model.restore_model()
                 num = 0
+                variable_names = [v.name for v in tf.trainable_variables()]
+                values = sess.run(variable_names)
+                sums = 0
+                for k,v in zip(variable_names, values):
+                        print("Variable: ", k)
+                        print("Shape: ", v.shape)
+                        if(len(v.shape)==2):
+                            sums += v.shape[0] * v.shape[1]
+                        else:
+                            sums += v.shape[0]
+                print("total: %d"%sums)
                 for file_idx, file_name in enumerate(mixture_lst):
                     group_data_seg, mix_magn, mix_phase, mix_sig, src_sigs = prepare_feat(
                         test_dir, file_name)
