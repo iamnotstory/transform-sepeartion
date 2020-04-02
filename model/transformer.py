@@ -112,6 +112,7 @@ class DF_Model(object):
         
 
         yeta = tf.get_variable(name='eta', shape = [1], dtype = tf.float32)
+
         res = tf.exp(gw_matrix / tf.square(yeta))
 
         #gw_ind = tf.tile(tf.expand_dims(tf.range(time_step),0), [batch_size, 1])
@@ -130,9 +131,9 @@ class DF_Model(object):
         batch_size = tf.shape(feat_input)[0]
         for i in range(num_heads):
             with tf.variable_scope('head_%d'%(i+1)):
-                Q = tf.layers.dense(feat_input, num_units, activation = tf.nn.relu, name = 'Q', use_bias = True)
-                K = tf.layers.dense(feat_input, num_units, activation = tf.nn.relu, name = 'K', use_bias = True)
-                V = tf.layers.dense(feat_input, num_units, activation = tf.nn.relu, name = 'V', use_bias = True)
+                Q = tf.layers.dense(feat_input, num_units, activation = None, name = 'Q', use_bias = True)
+                K = tf.layers.dense(feat_input, num_units, activation = None, name = 'K', use_bias = True)
+                V = tf.layers.dense(feat_input, num_units, activation = None, name = 'V', use_bias = True)
                 gw = self.gw_encoding(self._gw_matrix[0])
                 cl = tf.multiply(tf.matmul(Q, tf.transpose(K, [0,2,1])), 1.0 / math.sqrt(float(num_units)))
                 sl = tf.multiply(gw, cl)
@@ -149,7 +150,7 @@ class DF_Model(object):
         
         self.attention_probs = attention_probs
         attention_out = tf.concat(attention_out, 2)
-        attention_out = tf.layers.dense(attention_out, total_units, activation = tf.nn.relu)
+        #attention_out = tf.layers.dense(attention_out, total_units, activation = tf.nn.relu)
         attention_out = tf.contrib.layers.layer_norm(attention_out + feat_input)
         return attention_out
     
@@ -161,7 +162,7 @@ class DF_Model(object):
         for i in range(num_layers):
             with tf.variable_scope('transformer_%d'%(i+1)):
                 trm_input = self.multihead_attention(trm_input)
-                trm_input_tmp = tf.layers.dense(trm_input, total_units, activation = tf.nn.relu, name = 'ff', use_bias = True)
+                trm_input_tmp = tf.layers.dense(trm_input, total_units, activation = None, name = 'ff', use_bias = True)
                 trm_input = tf.contrib.layers.layer_norm(trm_input + trm_input_tmp)
         #trm_out = tf.contrib.layers.layer_norm(feat_input + trm_input)
         trm_out = trm_input
