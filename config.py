@@ -34,7 +34,7 @@ min_queue_size = 20
 load_file_num = 20
 min_sent_len = 10
 shorter_sent_len = 100
-longer_sent_len = 600
+longer_sent_len = 400
 embedding_dim = 20
 # train & dev dataset
 #train_dir = "/gpfs/share/home/1801213802/data//data/train"
@@ -50,7 +50,7 @@ lamda = 100.0
 #job_dir = "job/no_pretrain_2layer_nodrop_ipd_anechoic"
 #job_dir = "job/no_preptrain_multidcl1_cmvn_npsm_lambda50"
 #job_dir = "job/original_nreluqkv_1tr_test_50epoch"
-job_dir = "job/gw_tet_delete_relu_layer_2_delete_layer_600"
+job_dir = "job/gw_tet_delete_relu_layer_2_change_inner_layer_400_yeta"
 #job_dir = "job/original_nreluqkv"
 #job_dir = "job/no_preptrain_multidc_cmvn"
 #job_dir = "job/no_pretrain_2layer_nodrop_multidc"

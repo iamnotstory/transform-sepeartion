@@ -112,9 +112,9 @@ class DF_Model(object):
         
 
         yeta = tf.get_variable(name='eta', shape = [1], dtype = tf.float32)
-
-        res = tf.exp(gw_matrix / tf.square(yeta))
-
+        tmp = tf.einsum('btf,t->btf', gw_matrix, 1 / tf.square(yeta))
+        #res = tf.exp(gw_matrix / tf.square(yeta))
+        res = tf.exp(tmp)
         #gw_ind = tf.tile(tf.expand_dims(tf.range(time_step),0), [batch_size, 1])
         #gw_enc = tf.convert_to_tensor(res, tf.float32)
         #gw_ind_ = tf.tile(tf.expand_dims(0,tf.range(time_step)),[batch_size, 1])
@@ -162,7 +162,8 @@ class DF_Model(object):
         for i in range(num_layers):
             with tf.variable_scope('transformer_%d'%(i+1)):
                 trm_input = self.multihead_attention(trm_input)
-                trm_input_tmp = tf.layers.dense(trm_input, total_units, activation = None, name = 'ff', use_bias = True)
+                trm_input_tmp = tf.layers.dense(trm_input, total_units, activation = tf.nn.relu, name = 'inner', use_bias = True)
+                trm_input_tmp = tf.layers.dense(trm_input_tmp, total_units, activation = None, name = 'ff', use_bias = True)
                 trm_input = tf.contrib.layers.layer_norm(trm_input + trm_input_tmp)
         #trm_out = tf.contrib.layers.layer_norm(feat_input + trm_input)
         trm_out = trm_input
