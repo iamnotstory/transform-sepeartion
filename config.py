@@ -75,11 +75,11 @@ fcl_layers = 0
 fcl_hidden_size = 600
 # training param
 seed = 123
-resume = False
+resume = True
 init_mean = 0.0
 init_stddev = 0.02
 max_grad_norm = 200
-learning_rate = 1e-3
+learning_rate = 0.00064
 max_epoch = 300
 pretrain_shorter_epoch = 0
 log_period = 10
@@ -97,10 +97,10 @@ test_dir = '/gpfs/share/home/1801213802/data/mixreverb/2speakers_reverb/wav8k/mi
 #test_name = "test_h1000"
 #test_dir = "/gpfs/share/home/1801213802/data/mixreverb/2speakers_reverb/wav8k/min/cv"
 #test_name = 'test_h1000_load1'
-test_name = 'GW_load_option_1_old'
+test_name = 'GW_load_option_1_old_average'
 # load option
 load_option = 1
-load_path = ""
+load_path = "job/gw_tet_delete_relu_layer_2_change_inner_layer_400_yeta/model.ckpt-average"
 stable = False
 silence = False
 ipdonly = False

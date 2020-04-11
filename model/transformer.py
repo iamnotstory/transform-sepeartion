@@ -44,8 +44,8 @@ class DF_Model(object):
         self.dev_writer = tf.summary.FileWriter(dev_event_dir)
     
     def create_saver(self):
-        self.saver = tf.train.Saver(tf.global_variables(), max_to_keep = 5)
-        self.best_loss_saver = tf.train.Saver(tf.global_variables(), max_to_keep = 1)
+        self.saver = tf.train.Saver(tf.global_variables(), max_to_keep = 8)
+        self.best_loss_saver = tf.train.Saver(tf.global_variables(), max_to_keep = 3)
         a = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES)
         #IPD_key = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope = 'SpeechSeparation/Model/IPD_DC')
         #print(IPD_key)
@@ -100,7 +100,7 @@ class DF_Model(object):
         self.latest_loss = 0.0
         self.epoch_counter += 1
 
-    def gw_encoding(self, gw_matrix):
+    def gw_encoding(self, gw_matrix, attention):
         #cfg = self.config
         #res = []
         #for i in range(length):
@@ -110,8 +110,9 @@ class DF_Model(object):
         #    res.append(tmp)
         #res = np.array(res)
         
-
+        
         yeta = tf.get_variable(name='eta', shape = [1], dtype = tf.float32)
+        #yeta = tf.layers.dense(attention, 1, activation = tf.nn.softmax, name='yeta')
         tmp = tf.einsum('btf,t->btf', gw_matrix, 1 / tf.square(yeta))
         #res = tf.exp(gw_matrix / tf.square(yeta))
         res = tf.exp(tmp)
@@ -134,7 +135,7 @@ class DF_Model(object):
                 Q = tf.layers.dense(feat_input, num_units, activation = None, name = 'Q', use_bias = True)
                 K = tf.layers.dense(feat_input, num_units, activation = None, name = 'K', use_bias = True)
                 V = tf.layers.dense(feat_input, num_units, activation = None, name = 'V', use_bias = True)
-                gw = self.gw_encoding(self._gw_matrix[0])
+                gw = self.gw_encoding(self._gw_matrix[0], V)
                 cl = tf.multiply(tf.matmul(Q, tf.transpose(K, [0,2,1])), 1.0 / math.sqrt(float(num_units)))
                 sl = tf.multiply(gw, cl)
                 sl = tf.abs(sl)
@@ -460,6 +461,7 @@ class DF_Model(object):
         else:
             load_path = self.config.load_path
         try:
+            print(load_path)
             self.saver.restore(self.session, load_path)
             logging.info("Loaded model from path {}".format(load_path))
         except Exception as e:
